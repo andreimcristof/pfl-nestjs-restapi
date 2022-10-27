@@ -21,7 +21,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async signup(authDto: AuthDto): Promise<User> {
+  async signup(authDto: AuthDto): Promise<{ access_token: string }> {
     // generate password hash
     const hash = await argon.hash(authDto.password);
 
@@ -34,9 +34,7 @@ export class AuthService {
         },
       });
 
-      // return the saved user
-      delete user.hash;
-      return user;
+      return this.signToken(user.id, user.email);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002')
@@ -60,8 +58,6 @@ export class AuthService {
     const isMatch = await argon.verify(user.hash, authDto.password);
     if (!isMatch) throw new ForbiddenException(AuthError.InvalidCredentials);
 
-    // if all is well return trimmed user (without hash information)
-    delete user.hash;
     return this.signToken(user.id, user.email);
   }
 
