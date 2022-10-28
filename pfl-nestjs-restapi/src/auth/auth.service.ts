@@ -6,6 +6,7 @@ import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { CustomLoggerService } from '../shared/logging/logging.service';
 
 enum AuthError {
   InvalidCredentials = 'Credentials are invalid',
@@ -16,6 +17,7 @@ export class AuthService {
    *
    */
   constructor(
+    private loggerService: CustomLoggerService,
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -37,9 +39,12 @@ export class AuthService {
       return this.signToken(user.id, user.email);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002')
+        if (error.code === 'P2002') {
+          this.loggerService.error(error);
           throw new ForbiddenException(AuthError.InvalidCredentials);
+        }
       }
+      this.loggerService.error(error);
       throw error;
     }
   }
